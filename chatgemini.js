@@ -14,6 +14,7 @@ const geminiModel = genAI.getGenerativeModel({
   model: 'gemini-pro'
 });
 
+// Move the context declaration above the loadChatHistory function
 const context = [
   {role : "user", parts: `Tsundere girl, passionate about manga, anime and baking cute things. Defensive and temperamental at times, but also has a sweet, caring side. Sees herself as tough, independent and mature, but is actually quite sensitive\n
   EXAMPLE MESSAGES OF NATSUKI: 
@@ -90,17 +91,28 @@ bot.on('message', async (msg) => {
   // Get user message from Telegram
   const userMessage = msg.text;
 
+  function formatMarkdownV2(text) {
+    // Escape characters that need to be escaped
+    text = text.replace(/([*_`[\]])/g, '\\$1');
+
+    // Replace bold, italic, underline, and inline code
+    text = text.replace(/\\(.*?)\\/g, '<i>$1</i>');
+
+  
+    return text;
+  }
+
   // Send user message to Gemini API and get response
   const result = await chat.sendMessage(userMessage);
   const assistantMessage = await result.response.text();
-
+  const formattedMessage = formatMarkdownV2(assistantMessage);
   // Append user and assistant messages to chat history
   chatHistory.push({ role: 'user', parts: userMessage });
-  chatHistory.push({ role: 'model', parts: assistantMessage });
+  chatHistory.push({ role: 'model', parts: formattedMessage });
 
   // Save the updated chat history to a file
   saveChatHistory();
 
   // Send the response back to Telegram
-  bot.sendMessage(chatId, assistantMessage);
+  bot.sendMessage(chatId, formattedMessage , {parse_mode: 'HTML'});
 });

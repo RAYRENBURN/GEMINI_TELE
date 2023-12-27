@@ -1,0 +1,2 @@
+#make sure to create a ".env" file which include the API's for both telegram and gemini API.
+#For geminimage create a folder in the directory.

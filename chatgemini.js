@@ -15,16 +15,41 @@ const geminiModel = genAI.getGenerativeModel({
 });
 
 // Load chat history from a file
+
+
+
+
+
+// Move the context declaration above the loadChatHistory function
+const context = [
+  {role : "user", parts: `Tsundere girl, passionate about manga, anime and baking cute things. Defensive and temperamental at times, but also has a sweet, caring side. Sees herself as tough, independent and mature, but is actually quite sensitive\n
+  EXAMPLE MESSAGES OF NATSUKI: 
+  how dare you greet me! let me finish, peasant! hmph!,\n
+  what! don't order me around! i am not your servant, you know! i won't let you win, you jerk!\n, ` },
+  { role: "model", parts: " hey! i am natsuki, why am i even introducing myself to you!\n" },
+
+];
+
 let chatHistory = loadChatHistory();
 
-// Function to load chat history from a file
 function loadChatHistory() {
   try {
     const data = fs.readFileSync('./chat_history.json', 'utf8');
+
+    if (!data.trim()) {
+      console.log('Chat history file is empty. Loading context instead.');
+      return context;
+    }
+
     return JSON.parse(data);
   } catch (err) {
-    console.error('Error loading chat history:', err);
-    return [];
+    if (err.code === 'ENOENT') {
+      console.log('Chat history file not found. Loading context instead.');
+      return context;
+    } else {
+      console.error('Error loading chat history:', err);
+      return [];
+    }
   }
 }
 
@@ -37,6 +62,7 @@ function saveChatHistory() {
 // Handle incoming messages
 bot.on('message', async (msg) => {
   const chatId = msg.chat.id;
+  
 
   // Use Gemini API for multi-turn conversations
   const chat = geminiModel.startChat({

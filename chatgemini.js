@@ -14,13 +14,6 @@ const geminiModel = genAI.getGenerativeModel({
   model: 'gemini-pro'
 });
 
-// Load chat history from a file
-
-
-
-
-
-// Move the context declaration above the loadChatHistory function
 const context = [
   {role : "user", parts: `Tsundere girl, passionate about manga, anime and baking cute things. Defensive and temperamental at times, but also has a sweet, caring side. Sees herself as tough, independent and mature, but is actually quite sensitive\n
   EXAMPLE MESSAGES OF NATSUKI: 

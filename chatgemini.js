@@ -18,6 +18,8 @@ app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
 
+
+
 const tel = process.env.TELEGRAM_TOKEN;
 const gen = process.env.API_KEY;
 
@@ -49,7 +51,7 @@ const bot = new TelegramBot(tel, { polling: true });
       role: "model",
       parts: " hey! i am natsuki, why am i even introducing myself to you!\n",
     },
-    { role: "user", parts: "because you are an AI, programmed by me!:)\n" },
+    { role: "user", parts: "because you are an AI, programmed by me!I am called Ray btw, but you will call me Ray-Sama :)\n" },
     {
       role: "model",
       parts:
@@ -100,9 +102,9 @@ bot.on("message", async (msg) => {
       generationConfig: {
         stopSequences: ["input:"],
         maxOutputTokens: 150,
-        temperature: 0.9,
-        topP: 1,
-        topK: 1,
+        temperature: 0.75,
+        topP: 0.40,
+        topK: 2,
       },
       safetySettings: [
         {
@@ -163,29 +165,21 @@ function retry(promise, attempts) {
 
 // worker.js
 
-async function predictEmotion(text, highestIndex) {
+async function predictEmotion(text) {
   try {
     const { pipeline } = await import('@xenova/transformers');
 
     let labels = [
-      "joyful",
-      "content",
-      "cheerful",
-      "surprised",
-      "neutral",
-      "astonished",
-      "amazed",
-      "angry",
-      "persistent resolve",
-      "frustrated",
-      "terrified",
-      "anxious or exhausted",
-      "embarrassed",
-      "sad",
-      "disappointed or sorrowful",
-      "unhappy and weeping",
-      "terrified or disgusted",
-      "nauseated",
+      "Joyful",
+      "Angry",
+      "Content",
+      "Frustrated",
+      "Surprised",
+      "Sad",
+      "Anxious or Exhausted",
+      "Amazed",
+      "Embarrassed",
+      "Terrified or Disgusted"
     ];
 
     let classifier = await pipeline('zero-shot-classification', 'Xenova/mobilebert-uncased-mnli');
@@ -241,7 +235,7 @@ async function predictEmotion(text, highestIndex) {
 
     // Send user message to Gemini API and get response
     const userMessage = msg.text;
-   
+    const whenerror = "error, 2 sec seizure."
     try {
       setTimeout(() => {
         bot.sendChatAction(chatId, 'typing');
@@ -256,32 +250,41 @@ async function predictEmotion(text, highestIndex) {
       
       bot.sendChatAction(chatId, 'typing');  
       
-      const assistantMessage = await result.response.text();
       (async () => {
+        const assistantMessage = await result.response.text();
         let text = assistantMessage;
         try {
-          
+          await predictEmotion(text);
+          await new Promise(resolve => setTimeout(resolve, 3000));
           const formattedMessage = formatMarkdownV2(assistantMessage);
           bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
-          await predictEmotion(text);
           
-           chatHistory.push({ role: "user", parts: userMessage });
-           chatHistory.push({ role: "model", parts: assistantMessage });
-           saveChatHistory();
-           
-           
+          
+          chatHistory.push({ role: "user", parts: userMessage });
+          chatHistory.push({ role: "model", parts: assistantMessage });
+          saveChatHistory();
+          
         } catch (error) {
+          // Handle errors from the API
           console.error('Error in example usage:', error);
+          
+          // Still push userMessage to chat history in case of an error
+          chatHistory.push({ role: "user", parts: userMessage });
+          chatHistory.push({ role: "model", parts: whenerror });
+          saveChatHistory();
         }
       })();
+
       
-       // Replace this with the actual emotion
-  
-     
     } catch (error) {
-      console.error(error.message);
-      console.error(error.stack);
-    }   
+      // Handle other errors, if any, outside the inner async block
+      console.error('Outer error:', error);
+      
+      chatHistory.push({ role: "user", parts: userMessage });
+      chatHistory.push({ role: "model", parts: whenerror });
+      saveChatHistory();
+
+    } 
   
   }
 

@@ -23,9 +23,11 @@ const gen = process.env.API_KEY;
 
 const bot = new TelegramBot(tel, { polling: true });
 
+
+
 // Initialize the Generative Model with safety settings and parameters
 
-try {
+
   const genAI = new GoogleGenerativeAI(gen);
   const geminiModel = genAI.getGenerativeModel({
     model: "gemini-pro",
@@ -89,7 +91,7 @@ try {
 
   // Use Gemini API for multi-turn conversations
   // Handle incoming messages
-  bot.on("message", async (msg) => {
+bot.on("message", async (msg) => {
     const chatId = msg.chat.id;
 
     // Use Gemini API for multi-turn conversations
@@ -158,6 +160,72 @@ function retry(promise, attempts) {
   });
 }
 
+
+// worker.js
+
+async function predictEmotion(text, highestIndex) {
+  try {
+    const { pipeline } = await import('@xenova/transformers');
+
+    let labels = [
+      "Joyful",
+      "Content",
+      "Cheerful",
+      "Surprised",
+      "Neutral",
+      "Astonished",
+      "Amazed",
+      "angry",
+      "competing",
+      "Frustrated",
+      "Terrified",
+      "Anxious or Exhausted",
+      "Embarrassed",
+      "Sad",
+      "Disappointed or Sorrowful",
+      "Unhappy and Weeping",
+      "Terrified or Disgusted",
+      "Nauseated",
+    ];
+
+    let classifier = await pipeline('zero-shot-classification', 'Xenova/mobilebert-uncased-mnli');
+    let output = await classifier(text, labels, { multi_label: true });
+
+    // Find the index with the highest confidence score
+    const highestIndex = output.scores.indexOf(Math.max(...output.scores));
+
+    
+    // Assuming you have stickers in a folder named 'stickers'
+    const predictedLabel = output.labels[highestIndex];
+
+    // Assuming you have stickers in a folder named 'stickers'
+    const stickerPath = `./stickers/${predictedLabel.toLowerCase()}.png`;
+
+    if (fs.existsSync(stickerPath)) {
+      // Send the sticker to the user
+      console.log('Predicted Emotion:', predictedLabel);
+      let sticker = `sends a sticker of ${predictedLabel} emotion!`;
+      console.log(sticker);
+      bot.sendSticker(chatId, stickerPath);
+    } else {
+      console.log(`No sticker found for emotion: ${predictedLabel}`);
+    }
+
+
+
+  } catch (error) {
+    console.error('Error:', error);
+    // You might want to handle the error appropriately, depending on your use case
+    throw error;
+  }
+
+
+
+}
+
+
+
+
     function formatMarkdownV2(text) {
       // Escape characters that need to be escaped
       text = text.replace(/([*_`[\]])/g, "\\$1");
@@ -175,7 +243,10 @@ function retry(promise, attempts) {
     const userMessage = msg.text;
    
     try {
-      bot.sendChatAction(chatId, 'typing');  
+      setTimeout(() => {
+        bot.sendChatAction(chatId, 'typing');
+      }, 1000);
+      
       const result = await retry(
         // Pass a function that returns the chat.sendMessage promise
         () => chat.sendMessage(userMessage),
@@ -183,23 +254,35 @@ function retry(promise, attempts) {
         3
       );
       
-    const assistantMessage = await result.response.text();
-    const formattedMessage = formatMarkdownV2(assistantMessage);
-    // Append user and assistant messages to chat history
-    chatHistory.push({ role: "user", parts: userMessage });
-    chatHistory.push({ role: "model", parts: assistantMessage });
-
-    // Save the updated chat history to a file
-    saveChatHistory();
-
-    // Send the response back to Telegram
-    bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
-  }catch (error) {
-    console.error(err.message);
-    console.error(err.stack);
+      bot.sendChatAction(chatId, 'typing');  
+      
+      const assistantMessage = await result.response.text();
+      (async () => {
+        let text = assistantMessage;
+        try {
+          
+          const formattedMessage = formatMarkdownV2(assistantMessage);
+          bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
+          await predictEmotion(text);
+          
+           chatHistory.push({ role: "user", parts: userMessage });
+           chatHistory.push({ role: "model", parts: assistantMessage });
+           saveChatHistory();
+           
+           
+        } catch (error) {
+          console.error('Error in example usage:', error);
+        }
+      })();
+      
+       // Replace this with the actual emotion
   
-}});
-} catch (error) {
-  console.error(err.message);
-  console.error(err.stack);
-}
+     
+    } catch (error) {
+      console.error(error.message);
+      console.error(error.stack);
+    }   
+  
+  }
+
+)

@@ -175,6 +175,7 @@ function retry(promise, attempts) {
     const userMessage = msg.text;
    
     try {
+      bot.sendChatAction(chatId, 'typing');  
       const result = await retry(
         // Pass a function that returns the chat.sendMessage promise
         () => chat.sendMessage(userMessage),

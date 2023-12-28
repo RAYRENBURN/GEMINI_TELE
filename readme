@@ -1,5 +1,5 @@
 make sure to create a ".env" file which include the API's for both telegram and gemini API.
 For geminimage create a "images" folder in the directory.
-Extract the stickers Folder in the directory for the chat API
+Extract the stickers Folder in the directory for the chat API.
 
 

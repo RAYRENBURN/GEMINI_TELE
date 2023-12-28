@@ -44,7 +44,7 @@ bot.on('message', async (msg) => {
         });
 
         // Specify the path where you want to save the file
-        const localFilePath = `./photos/${file.file_path.split('/').pop()}`;
+        const localFilePath = `./images/${file.file_path.split('/').pop()}`;
 
         // Pipe the file stream to the local file
         response.data.pipe(fs.createWriteStream(localFilePath));

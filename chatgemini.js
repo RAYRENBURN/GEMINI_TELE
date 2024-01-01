@@ -87,6 +87,7 @@ function saveChatHistory() {
 // Handle incoming messages
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
+  bot.sendChatAction(chatId, "typing");
 
   // Use Gemini API for multi-turn conversations
   const chat = geminiModel.startChat({
@@ -156,27 +157,36 @@ bot.on("message", async (msg) => {
 
   // worker.js
 
+  // Import outside the function
+  const { pipeline } = await import("@xenova/transformers");
+  const path = require("path");
+
+  // Create the classifier once
+  const classifier = await pipeline(
+    "zero-shot-classification",
+    "Xenova/mobilebert-uncased-mnli",
+  );
+
+  const labels = [
+    "Joyful",
+    "Angry",
+    "Content",
+    "Frustrated",
+    "Surprised",
+    "Sad",
+    "Anxious or Exhausted",
+    "Amazed",
+    "Embarrassed",
+    "Terrified or Disgusted",
+  ];
+
+  const stickerFolder = "./stickers";
+
   async function predictEmotion(text) {
     try {
-      const { pipeline } = await import("@xenova/transformers");
-
-      let labels = [
-        "Joyful",
-        "Angry",
-        "Content",
-        "Frustrated",
-        "Surprised",
-        "Sad",
-        "Anxious or Exhausted",
-        "Amazed",
-        "Embarrassed",
-        "Terrified or Disgusted",
-      ];
-
-      let classifier = await pipeline(
-        "zero-shot-classification",
-        "Xenova/mobilebert-uncased-mnli",
-      );
+      setTimeout(() => {
+        bot.sendChatAction(chatId, "upload_photo");
+      });
       let output = await classifier(text, labels, { multi_label: true });
 
       // Find the index with the highest confidence score
@@ -184,16 +194,17 @@ bot.on("message", async (msg) => {
 
       // Assuming you have stickers in a folder named 'stickers'
       const predictedLabel = output.labels[highestIndex];
-
-      // Assuming you have stickers in a folder named 'stickers'
-      const stickerPath = `./stickers/${predictedLabel.toLowerCase()}.png`;
+      const stickerPath = path.join(
+        stickerFolder,
+        `${predictedLabel.toLowerCase()}.png`,
+      );
 
       if (fs.existsSync(stickerPath)) {
-        // Send the sticker to the user
+        // Send the sticker to the user asynchronously
         console.log("Predicted Emotion:", predictedLabel);
         let sticker = `sends a sticker of ${predictedLabel} emotion!`;
         console.log(sticker);
-        bot.sendSticker(chatId, stickerPath);
+        await bot.sendSticker(chatId, stickerPath);
       } else {
         console.log(`No sticker found for emotion: ${predictedLabel}`);
       }
@@ -222,10 +233,7 @@ bot.on("message", async (msg) => {
   const whenerror = "error, 2 sec seizure.";
   try {
     // Simulate typing action before sending userMessage
-    setTimeout(() => {
-      bot.sendChatAction(chatId, "upload_photo");
-    });
-
+    bot.sendChatAction(chatId, "typing");
     // Send userMessage with retries
     const result = await retry(() => chat.sendMessage(userMessage), 3);
 
@@ -233,16 +241,26 @@ bot.on("message", async (msg) => {
     let text = assistantMessage;
 
     try {
-      // Simulate typing actions with delays
-      await simulatephoto(chatId, 3000);
+      const randomNumber = Math.random();
 
-      await predictEmotion(text);
-      await simulateTyping(chatId, 3000);
-      await simulateTyping(chatId, 3000);
+      // Check if the random number is greater than 0.7
+      if (randomNumber > 0.9) {
+        setTimeout(() => {
+          bot.sendChatAction(chatId, "typing");
+        });
+        await simulatephoto(chatId, 3000);
+        await predictEmotion(text);
+        await simulateTyping(chatId, 3000);
 
-      // Send the formatted message
-      const formattedMessage = formatMarkdownV2(assistantMessage);
-      bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
+        const formattedMessage = formatMarkdownV2(assistantMessage);
+        bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
+      } else {
+        // Execute this block if the condition is false
+
+        // Send the formatted message
+        const formattedMessage = formatMarkdownV2(assistantMessage);
+        bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
+      }
 
       // Push messages to chat history
       chatHistory.push({ role: "user", parts: userMessage });

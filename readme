@@ -1,5 +1,8 @@
 make sure to create a ".env" file which include the API's for both telegram and gemini API.
+also create a chat_history.json file for chatbot messages handling.
 For geminimage create a "images" folder in the directory.
 Extract the stickers Folder in the directory for the chat API.
 For hosting the bot 24/7 use replit and uptime robot for monitoring the server.
+
+Date: 3/1/24
 

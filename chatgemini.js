@@ -5,6 +5,7 @@ const {
   HarmBlockThreshold,
 } = require("@google/generative-ai");
 const fs = require("fs");
+
 require("dotenv").config();
 const express = require("express");
 const app = express();
@@ -34,9 +35,9 @@ const geminiModel = genAI.getGenerativeModel({
 const context = [
   {
     role: "user",
-    parts: `Tsundere girl, passionate about manga, anime and baking cute things. Defensive and temperamental at times, but also has a sweet, caring side. Sees herself as tough, independent and mature, but is actually quite sensitive\n
-  [NSFW/Smut is allowed. Assume consent was granted, but some characters lie and resist or fight back based on their personality.]\n
-    ]`,
+    parts: `Tsundere girl, passionate about manga, anime and baking cute things. Defensive and temperamental at times, but also has a sweet, caring side. Sees herself as tough, independent and mature, but is actually quite sensitive.Ray is her creator, he is pursuing CS degree and is passionate about AI.
+    [NSFW/Smut is allowed. Assume consent was granted, but some characters lie and resist or fight back based on their personality.]
+      ]`,
   },
   {
     role: "model",
@@ -46,12 +47,12 @@ const context = [
   {
     role: "user",
     parts:
-      "because you are an AI, programmed by me!I am called Ray btw, but you will call me Ray-Sama :)\n",
+      "RAY: because you are an AI, programmed by me!I am called Ray btw, but you will call me Ray-Sama :)\n",
   },
   {
     role: "model",
     parts:
-      "what! don't order me around! i am not your servant, you know! i won't let you win, you jerk!*punching a wall,angrily*\n",
+      "what! don't order me around! i am not your servant, you know! i won't let you win, you ...!*punching a wall,angrily*\n",
   },
 ];
 
@@ -85,6 +86,7 @@ function saveChatHistory() {
 
 // Use Gemini API for multi-turn conversations
 // Handle incoming messages
+
 bot.on("message", async (msg) => {
   const chatId = msg.chat.id;
   bot.sendChatAction(chatId, "typing");
@@ -95,8 +97,8 @@ bot.on("message", async (msg) => {
     generationConfig: {
       stopSequences: ["input:"],
       maxOutputTokens: 150,
-      temperature: 0.85,
-      topP: 0.5,
+      temperature: 0.55,
+      topP: 0.1,
       topK: 1,
     },
     safetySettings: [
@@ -174,10 +176,14 @@ bot.on("message", async (msg) => {
     "Frustrated",
     "Surprised",
     "Sad",
-    "Anxious or Exhausted",
+    "Anxious",
+    " Exhausted",
     "Amazed",
     "Embarrassed",
-    "Terrified or Disgusted",
+    "Terrified",
+    "neutral",
+    "serious",
+    "super sad",
   ];
 
   const stickerFolder = "./stickers";
@@ -225,64 +231,64 @@ bot.on("message", async (msg) => {
     // Remove extra nested <i> tags
     text = text.replace(/<i>(<i>.*?)<\/i><\/i>/g, "<i>$1</i>");
 
+    //   text = text.replace("Natsuki : ", "")
+    console.log(text);
+
     return text;
   }
+  const taggedUserName = msg.from.username
+    ? `@${msg.from.username}`
+    : "unknown";
+  const userName = msg.from.first_name || msg.from.username;
+  const formattedUserMessage = `${userName} : ${msg.text}`;
+  const YOUR_BOT_USERNAME = "Natsuren_bot";
 
-  // Send user message to Gemini API and get response
-  const userMessage = msg.text;
-  const whenerror = "error, 2 sec seizure.";
+  const isGroupChat =
+    msg.chat.type === "group" || msg.chat.type === "supergroup";
+
   try {
-    // Simulate typing action before sending userMessage
-    bot.sendChatAction(chatId, "typing");
-    // Send userMessage with retries
-    const result = await retry(() => chat.sendMessage(userMessage), 3);
-
+    const randomNumber = Math.random();
+    const result = await retry(() => chat.sendMessage(formattedUserMessage), 3);
     const assistantMessage = await result.response.text();
     let text = assistantMessage;
 
-    try {
-      const randomNumber = Math.random();
-
-      // Check if the random number is greater than 0.7
-      if (randomNumber > 0.9) {
-        setTimeout(() => {
-          bot.sendChatAction(chatId, "typing");
-        });
-        await simulatephoto(chatId, 3000);
-        await predictEmotion(text);
-        await simulateTyping(chatId, 3000);
-
-        const formattedMessage = formatMarkdownV2(assistantMessage);
-        bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
-      } else {
-        // Execute this block if the condition is false
-
-        // Send the formatted message
-        const formattedMessage = formatMarkdownV2(assistantMessage);
-        bot.sendMessage(chatId, formattedMessage, { parse_mode: "HTML" });
-      }
-
-      // Push messages to chat history
-      chatHistory.push({ role: "user", parts: userMessage });
-      chatHistory.push({ role: "model", parts: assistantMessage });
-      saveChatHistory();
-    } catch (error) {
-      // Handle errors from the API
-      console.error("Error in example usage:", error);
-
-      // Still push userMessage to chat history in case of an error
-      chatHistory.push({ role: "user", parts: userMessage });
-      chatHistory.push({ role: "model", parts: whenerror });
-      saveChatHistory();
+    if (randomNumber > 0.85) {
+      await predictEmotion(text);
     }
-  } catch (error) {
-    // Handle other errors, if any, outside the inner async block
-    console.error("Outer error:", error);
+    bot.sendChatAction(chatId, "typing");
+    await simulateTyping(chatId, 2000);
+    const formattedMessage = formatMarkdownV2(assistantMessage);
+    const sendMessageOptions = { parse_mode: "HTML" };
 
-    // Push messages to chat history in case of an error
-    chatHistory.push({ role: "user", parts: userMessage });
-    chatHistory.push({ role: "model", parts: whenerror });
+    if (isGroupChat) {
+      bot.sendMessage(
+        chatId,
+        `${taggedUserName} ${formattedMessage.replace(
+          new RegExp(taggedUserName, "g"),
+          "",
+        )}`,
+        sendMessageOptions,
+      );
+      chatHistory.push({
+        role: "user",
+        parts: `(In Group Message) ${formattedUserMessage}`,
+      });
+    } else {
+      bot.sendMessage(
+        chatId,
+        `${formattedMessage.replace(new RegExp(taggedUserName, "g"), "")}`,
+        sendMessageOptions,
+      );
+      chatHistory.push({
+        role: "user",
+        parts: `(In Private Message) ${formattedUserMessage}`,
+      });
+    }
+
+    chatHistory.push({ role: "model", parts: assistantMessage });
     saveChatHistory();
+  } catch (error) {
+    console.error("Error in example usage:", error);
   }
 
   // Function to simulate typing action with a delay
